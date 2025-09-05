@@ -46,22 +46,19 @@
       border-radius: 12px; font-size: 14px; z-index: 5; text-align:center;
       max-width: 85vw;
     }
-    #start {
-      position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
-      background: var(--giraffe-brown);
-      color: #fff; padding: 12px 16px; border-radius: 999px; z-index: 5;
-      font-weight: 700; border:none; display:none; cursor:pointer;
-    }
     #hint {
-      position: fixed; bottom: 64px; left: 50%; transform: translateX(-50%);
+      position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
       background: rgba(255,255,255,0.9); border:1px solid #eee; padding: 8px 12px;
       border-radius: 10px; font-size: 12px; z-index:5; display:none;
     }
+
+    /* صحنه AR فول‌اسکرین */
     a-scene { position: fixed !important; inset: 0 !important; z-index: 1; }
   </style>
 </head>
 <body>
   <div class="bg"></div>
+
   <div class="header">
     <div class="logo">🦒✨</div>
     <div class="title">دفتر زنده — جلد را اسکن کن!</div>
@@ -69,8 +66,8 @@
 
   <div id="msg">در حال آماده‌سازی AR...</div>
   <div id="hint">گوشی را روی جلد نگه دارید تا ویدیو ظاهر شود</div>
-  <button id="start">شروع</button>
 
+  <!-- ویدیو؛ عمداً muted تا بدون کلیک اجرا شود -->
   <video id="vid" src="video.mp4" playsinline webkit-playsinline muted loop preload="auto" crossorigin="anonymous"></video>
 
   <a-scene
@@ -82,8 +79,10 @@
     id="scene">
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
     <a-entity mindar-image-target="targetIndex: 0" id="target">
-      <a-video src="#vid" width="1" height="0.56" position="0 0 0"></a-video>
+      <!-- نسبت 16:9 -->
+      <a-video src="#vid" width="1" height="0.5625" position="0 0 0"></a-video>
     </a-entity>
   </a-scene>
 
@@ -92,73 +91,65 @@
     const target = document.getElementById('target');
     const vid = document.getElementById('vid');
     const msg = document.getElementById('msg');
-    const startBtn = document.getElementById('start');
     const hint = document.getElementById('hint');
-    let armed = false;
 
-    // تلاش اولیه برای گرفتن مجوز دوربین
-    function requestCamera(){
-      navigator.mediaDevices.getUserMedia({ video: true })
-        .then(() => {
+    // تلاش فوری برای گرفتن مجوز دوربین (برای نمایش دیالوگ روی موبایل)
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+        .then(stream => {
+          // آزاد کردن استریم فوری (MindAR خودش مدیریت می‌کند)
+          stream.getTracks().forEach(t => t.stop());
           msg.textContent = 'دوربین فعال شد. در حال بارگذاری AR...';
         })
         .catch(() => {
-          msg.textContent = 'برای شروع، روی دکمه «شروع» بزنید و اجازه دوربین بدهید.';
-          startBtn.style.display = 'inline-block';
+          msg.textContent = 'لطفاً اجازه دسترسی به دوربین را بدهید و صفحه را رفرش کنید.';
         });
+    } else {
+      msg.textContent = 'مرورگر شما از دوربین پشتیبانی نمی‌کند. لطفاً Chrome موبایل یا Safari iOS را امتحان کنید.';
     }
-    requestCamera();
 
-    // فعال‌سازی ویدیو بعد از لمس کاربر
-    function armVideo() {
-      if (armed) return;
-      const p = vid.play();
-      if (p && p.then) {
-        p.then(() => {
-          vid.pause(); vid.currentTime = 0; armed = true;
-          startBtn.style.display = 'none';
-          msg.textContent = 'دوربین آماده است؛ جلد را جلوی دوربین بگیرید.';
-          hint.style.display = 'inline-block';
-        }).catch(() => {
-          startBtn.style.display = 'inline-block';
-          msg.textContent = 'برای شروع، دکمه «شروع» را لمس کنید.';
-        });
+    // تلاش برای آماده‌سازی ویدیو بدون نیاز به کلیک (به خاطر muted بودن)
+    (async () => {
+      try {
+        vid.muted = true;
+        await vid.play();
+        // بلافاصله مکث تا فقط مجوز autoplay تأیید شود
+        vid.pause();
+        vid.currentTime = 0;
+      } catch(e) {
+        // اگر این بخش رد شد، باز هم AR کار می‌کند؛ فقط ویدیو موقع یافتن تارگت play می‌شود
       }
-    }
-    document.addEventListener('click', armVideo, { passive: true });
-    document.addEventListener('touchend', armVideo, { passive: true });
-    startBtn.addEventListener('click', () => {
-      requestCamera();
-      armVideo();
-    });
+    })();
 
     scene.addEventListener('arReady', () => {
-      if (!armed) startBtn.style.display = 'inline-block';
       msg.textContent = 'دوربین آماده است؛ جلد را جلوی دوربین بگیرید.';
       hint.style.display = 'inline-block';
     });
 
-    scene.addEventListener('arError', () => {
-      msg.textContent = 'خطا در شروع AR. مجوز دوربین را بررسی کنید.';
-      startBtn.style.display = 'inline-block';
+    scene.addEventListener('arError', (e) => {
+      console.error(e);
+      msg.textContent = 'خطا در شروع AR. مجوز دوربین یا سازگاری مرورگر را بررسی کنید.';
     });
 
-    target.addEventListener('targetFound', () => {
+    // وقتی تصویر پیدا شد، ویدیو را (بی‌صدا) پخش کن تا نیاز به کلیک نباشد
+    target.addEventListener('targetFound', async () => {
       msg.textContent = 'تصویر پیدا شد! در حال پخش ویدیو...';
       hint.style.display = 'none';
-      if (armed) {
+      try {
+        vid.muted = true; // بی‌صدا تا مرورگر بلاک نکند
         vid.currentTime = 0;
-        vid.play().catch(() => {
-          startBtn.style.display = 'inline-block';
-          msg.textContent = 'برای پخش ویدیو، روی «شروع» لمس کنید.';
-        });
+        await vid.play();
+      } catch(e) {
+        console.warn('Video play blocked:', e);
+        msg.textContent = 'ویدیو آماده نشد؛ لطفاً یک‌بار صفحه را رفرش کنید.';
       }
     });
 
     target.addEventListener('targetLost', () => {
       msg.textContent = 'تصویر از دست رفت. دوباره جلد را جلوی دوربین بگیرید.';
       hint.style.display = 'inline-block';
-      vid.pause(); vid.currentTime = 0;
+      vid.pause();
+      vid.currentTime = 0;
     });
   </script>
 </body>
