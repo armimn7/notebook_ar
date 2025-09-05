@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <title>دفتر زنده</title>
+  <title>دفتر زنده - تم زرافه</title>
 
   <!-- کتابخانه‌ها -->
   <script src="https://cdn.jsdelivr.net/npm/aframe@1.5.0/dist/aframe.min.js"></script>
@@ -11,27 +11,29 @@
 
   <style>
     :root{
-      --pink:#FF82A9; --yellow:#FFD166; --blue:#6EC1FF; --green:#7CE2AC; --purple:#A890FF;
+      --giraffe-yellow:#FFD166;
+      --giraffe-brown:#8B5E3C;
       --ink:#1a1a1a;
     }
-    html, body { margin:0; padding:0; height:100%; overflow:hidden; background:#fef9ff; }
+    html, body { margin:0; padding:0; height:100%; overflow:hidden; background:var(--giraffe-yellow); }
     body { font-family: sans-serif; color:var(--ink); }
 
+    /* پس‌زمینه خال‌خال زرافه */
     .bg {
       position: fixed; inset: 0; z-index: 0;
-      background:
-        radial-gradient(20px 20px at 10% 15%, var(--yellow) 0 40%, transparent 41%),
-        radial-gradient(24px 24px at 80% 20%, var(--blue) 0 40%, transparent 41%),
-        radial-gradient(18px 18px at 20% 80%, var(--green) 0 40%, transparent 41%),
-        radial-gradient(22px 22px at 85% 75%, var(--purple) 0 40%, transparent 41%),
-        linear-gradient(180deg, #fff 0%, #fff6ff 100%);
-      opacity: 0.7;
-      pointer-events: none;
+      background-color: var(--giraffe-yellow);
+      background-image:
+        radial-gradient(circle at 20% 30%, var(--giraffe-brown) 0 15%, transparent 16%),
+        radial-gradient(circle at 70% 20%, var(--giraffe-brown) 0 12%, transparent 13%),
+        radial-gradient(circle at 40% 70%, var(--giraffe-brown) 0 18%, transparent 19%),
+        radial-gradient(circle at 80% 80%, var(--giraffe-brown) 0 14%, transparent 15%);
+      background-size: 200px 200px;
     }
+
     .header {
       position: fixed; top: 8px; left: 50%; transform: translateX(-50%);
       z-index: 4; display:flex; align-items:center; gap:8px;
-      background: rgba(255,255,255,0.8); backdrop-filter: blur(6px);
+      background: rgba(255,255,255,0.85);
       padding: 6px 12px; border-radius: 14px; border:1px solid #eee;
       box-shadow: 0 4px 16px rgba(0,0,0,0.06);
     }
@@ -46,7 +48,7 @@
     }
     #start {
       position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
-      background: linear-gradient(90deg, var(--pink), var(--purple));
+      background: var(--giraffe-brown);
       color: #fff; padding: 12px 16px; border-radius: 999px; z-index: 5;
       font-weight: 700; border:none; display:none; cursor:pointer;
     }
@@ -61,7 +63,7 @@
 <body>
   <div class="bg"></div>
   <div class="header">
-    <div class="logo">🎒✨</div>
+    <div class="logo">🦒✨</div>
     <div class="title">دفتر زنده — جلد را اسکن کن!</div>
   </div>
 
@@ -94,13 +96,20 @@
     const hint = document.getElementById('hint');
     let armed = false;
 
-    navigator.mediaDevices.getUserMedia({ video: true })
-      .then(() => { msg.textContent = 'دوربین فعال شد. در حال بارگذاری AR...'; })
-      .catch(() => {
-        msg.textContent = 'دسترسی دوربین رد شد! از تنظیمات مرورگر اجازه دهید.';
-        startBtn.style.display = 'inline-block';
-      });
+    // تلاش اولیه برای گرفتن مجوز دوربین
+    function requestCamera(){
+      navigator.mediaDevices.getUserMedia({ video: true })
+        .then(() => {
+          msg.textContent = 'دوربین فعال شد. در حال بارگذاری AR...';
+        })
+        .catch(() => {
+          msg.textContent = 'برای شروع، روی دکمه «شروع» بزنید و اجازه دوربین بدهید.';
+          startBtn.style.display = 'inline-block';
+        });
+    }
+    requestCamera();
 
+    // فعال‌سازی ویدیو بعد از لمس کاربر
     function armVideo() {
       if (armed) return;
       const p = vid.play();
@@ -118,7 +127,10 @@
     }
     document.addEventListener('click', armVideo, { passive: true });
     document.addEventListener('touchend', armVideo, { passive: true });
-    startBtn.addEventListener('click', armVideo);
+    startBtn.addEventListener('click', () => {
+      requestCamera();
+      armVideo();
+    });
 
     scene.addEventListener('arReady', () => {
       if (!armed) startBtn.style.display = 'inline-block';
