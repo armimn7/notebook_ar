@@ -2,62 +2,64 @@
 <html lang="fa">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1, maximum-scale=1, user-scalable=no" />
   <title>دفتر زنده</title>
 
-  <!-- کتابخانه‌های لازم -->
+  <!-- کتابخانه‌ها -->
   <script src="https://cdn.jsdelivr.net/npm/aframe@1.5.0/dist/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
   <style>
-    body { margin:0; overflow:hidden; }
-    #tap { position:fixed; left:50%; bottom:16px; transform:translateX(-50%);
-      background:#000; color:#fff; padding:10px 14px; border-radius:10px; display:none; }
+    html, body { margin:0; padding:0; height:100%; background:#000; overflow:hidden; }
+    #msg {
+      position: fixed; top: 10px; left: 50%; transform: translateX(-50%);
+      background: rgba(0,0,0,0.7); color: #fff; padding: 8px 12px;
+      border-radius: 8px; font-family: sans-serif; font-size: 14px;
+      z-index: 999;
+    }
+    #tap {
+      position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+      background: rgba(0,0,0,0.75); color: #fff; padding: 10px 14px;
+      border-radius: 10px; display: none; font-family: sans-serif;
+    }
   </style>
 </head>
 <body>
-  <!-- ویدیوی متحرک جلد -->
-  <video id="vid" src="video.mp4" playsinline webkit-playsinline preload="auto" crossorigin="anonymous"></video>
-  <div id="tap">برای فعال‌شدن ویدیو یک‌بار لمس/کلیک کنید</div>
+  <div id="msg">در حال آماده‌سازی AR...</div>
+  <video id="vid" src="video.mp4" playsinline webkit-playsinline muted loop preload="auto" crossorigin="anonymous"></video>
+  <div id="tap">برای فعال‌شدن ویدیو یک‌بار لمس کنید</div>
 
   <a-scene
-    mindar-image="imageTargetSrc: targets.mind;"
+    mindar-image="imageTargetSrc: targets.mind; uiScanning: true; uiLoading: true;"
     vr-mode-ui="enabled: false"
-    device-orientation-permission-ui="enabled: true"
-    renderer="colorManagement: true; physicallyCorrectLights: true;">
+    device-orientation-permission-ui="enabled: false"
+    renderer="colorManagement: true; physicallyCorrectLights: true;"
+    embedded
+    id="scene">
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-    <!-- وقتی جلد شناسایی شد -->
     <a-entity mindar-image-target="targetIndex: 0" id="target">
-      <!-- صفحه پخش ویدیو روی جلد -->
-      <a-video src="#vid" width="1" height="0.6" position="0 0 0" rotation="0 0 0"></a-video>
+      <a-video src="#vid" width="1" height="0.56" position="0 0 0" rotation="0 0 0"></a-video>
     </a-entity>
   </a-scene>
 
   <script>
+    const scene = document.getElementById('scene');
+    const target = document.getElementById('target');
     const vid = document.getElementById('vid');
     const tap = document.getElementById('tap');
-    const target = document.getElementById('target');
+    const msg = document.getElementById('msg');
     let armed = false;
 
-    function armVideo(){
-      if (armed) return;
-      const p = vid.play();
-      if (p && p.then) {
-        p.then(()=>{ vid.pause(); vid.currentTime = 0; armed = true; tap.style.display='none'; })
-         .catch(()=>{ tap.style.display='block'; });
-      }
-    }
-    document.addEventListener('click', armVideo);
-    document.addEventListener('touchend', armVideo, {passive:true});
+    // درخواست دسترسی دوربین به محض لود
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(stream => {
+        msg.textContent = 'دوربین فعال شد، در حال بارگذاری AR...';
+      })
+      .catch(err => {
+        msg.textContent = 'دسترسی به دوربین رد شد! لطفاً از تنظیمات مرورگر اجازه بدهید.';
+        console.error(err);
+      });
 
-    target.addEventListener('targetFound', ()=>{
-      if (armed) { vid.currentTime = 0; vid.play().catch(()=>{ tap.style.display='block'; }); }
-    });
-    target.addEventListener('targetLost', ()=>{
-      vid.pause(); vid.currentTime = 0;
-    });
-  </script>
-</body>
-</html>
+    scene.addEventListener('arReady', () => {
