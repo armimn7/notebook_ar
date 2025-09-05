@@ -9,18 +9,14 @@
   <script src="https://cdn.jsdelivr.net/npm/aframe@1.5.0/dist/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
-  <!-- فونت کودکانه -->
-  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@500;700&display=swap" rel="stylesheet"/>
-
   <style>
     :root{
       --pink:#FF82A9; --yellow:#FFD166; --blue:#6EC1FF; --green:#7CE2AC; --purple:#A890FF;
       --ink:#1a1a1a;
     }
     html, body { margin:0; padding:0; height:100%; overflow:hidden; background:#fef9ff; }
-    body { font-family: "Vazirmatn", system-ui, -apple-system, Segoe UI, sans-serif; color:var(--ink); }
+    body { font-family: sans-serif; color:var(--ink); }
 
-    /* پس‌زمینه کودکانه */
     .bg {
       position: fixed; inset: 0; z-index: 0;
       background:
@@ -39,52 +35,31 @@
       padding: 6px 12px; border-radius: 14px; border:1px solid #eee;
       box-shadow: 0 4px 16px rgba(0,0,0,0.06);
     }
-    .header .logo {
-      font-size: 20px; line-height:1;
-    }
-    .header .title {
-      font-weight: 700; font-size: 14px;
-    }
+    .header .logo { font-size: 20px; }
+    .header .title { font-weight: 700; font-size: 14px; }
 
-    /* پیام روی صفحه */
     #msg {
       position: fixed; top: 60px; left: 50%; transform: translateX(-50%);
       background: rgba(0,0,0,0.65); color: #fff; padding: 10px 14px;
       border-radius: 12px; font-size: 14px; z-index: 5; text-align:center;
-      max-width: 85vw; box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+      max-width: 85vw;
     }
-
-    /* دکمه شروع (برای کمک به اجازه‌ها و پخش) */
     #start {
       position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
       background: linear-gradient(90deg, var(--pink), var(--purple));
       color: #fff; padding: 12px 16px; border-radius: 999px; z-index: 5;
-      font-weight: 700; border:none; box-shadow: 0 10px 24px rgba(255,130,169,0.4);
-      display:none; cursor:pointer;
+      font-weight: 700; border:none; display:none; cursor:pointer;
     }
-    #start:active { transform: translateX(-50%) scale(0.98); }
-
-    /* نوک تیر راهنما پایین صفحه */
     #hint {
       position: fixed; bottom: 64px; left: 50%; transform: translateX(-50%);
       background: rgba(255,255,255,0.9); border:1px solid #eee; padding: 8px 12px;
       border-radius: 10px; font-size: 12px; z-index:5; display:none;
     }
-
-    /* صحنه AR فول‌اسکرین */
     a-scene { position: fixed !important; inset: 0 !important; z-index: 1; }
-
-    /* بنر چرخاندن گوشی (اگر لازم شد) */
-    #rotate {
-      position: fixed; inset:0; z-index: 6; display:none; align-items:center; justify-content:center;
-      background: rgba(0,0,0,0.6); color:#fff; text-align:center; padding:20px;
-      font-weight:700;
-    }
   </style>
 </head>
 <body>
   <div class="bg"></div>
-
   <div class="header">
     <div class="logo">🎒✨</div>
     <div class="title">دفتر زنده — جلد را اسکن کن!</div>
@@ -93,12 +68,9 @@
   <div id="msg">در حال آماده‌سازی AR...</div>
   <div id="hint">گوشی را روی جلد نگه دارید تا ویدیو ظاهر شود</div>
   <button id="start">شروع</button>
-  <div id="rotate">لطفاً گوشی را عمودی نگه دارید</div>
 
-  <!-- ویدیو (Muted برای اجازه پخش خودکار روی موبایل) -->
   <video id="vid" src="video.mp4" playsinline webkit-playsinline muted loop preload="auto" crossorigin="anonymous"></video>
 
-  <!-- صحنه AR -->
   <a-scene
     mindar-image="imageTargetSrc: targets.mind; uiScanning: true; uiLoading: true;"
     vr-mode-ui="enabled: false"
@@ -108,11 +80,8 @@
     id="scene">
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-
-    <!-- هدف تصویر: targetIndex را با اولین تارگت نگه می‌داریم -->
     <a-entity mindar-image-target="targetIndex: 0" id="target">
-      <!-- نسبت تصویر ویدیو را متناسب با ویدیو تنظیم کن -->
-      <a-video src="#vid" width="1" height="0.56" position="0 0 0" rotation="0 0 0"></a-video>
+      <a-video src="#vid" width="1" height="0.56" position="0 0 0"></a-video>
     </a-entity>
   </a-scene>
 
@@ -123,40 +92,27 @@
     const msg = document.getElementById('msg');
     const startBtn = document.getElementById('start');
     const hint = document.getElementById('hint');
-    const rotate = document.getElementById('rotate');
-
     let armed = false;
 
-    // درخواست دسترسی دوربین بلافاصله
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-      navigator.mediaDevices.getUserMedia({ video: true })
-        .then(() => {
-          msg.textContent = 'دوربین فعال شد. در حال بارگذاری AR...';
-        })
-        .catch(() => {
-          msg.textContent = 'دسترسی دوربین رد شد! از تنظیمات مرورگر اجازه دهید و صفحه را رفرش کنید.';
-          startBtn.style.display = 'inline-block';
-        });
-    } else {
-      msg.textContent = 'مرورگر شما از دوربین پشتیبانی نمی‌کند. لطفاً Chrome موبایل یا Safari iOS را امتحان کنید.';
-    }
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(() => { msg.textContent = 'دوربین فعال شد. در حال بارگذاری AR...'; })
+      .catch(() => {
+        msg.textContent = 'دسترسی دوربین رد شد! از تنظیمات مرورگر اجازه دهید.';
+        startBtn.style.display = 'inline-block';
+      });
 
-    // اگر مرورگر اجازه autoplay نده، با لمس کاربر آماده می‌کنیم
     function armVideo() {
       if (armed) return;
       const p = vid.play();
       if (p && p.then) {
         p.then(() => {
-          vid.pause();
-          vid.currentTime = 0;
-          armed = true;
+          vid.pause(); vid.currentTime = 0; armed = true;
           startBtn.style.display = 'none';
           msg.textContent = 'دوربین آماده است؛ جلد را جلوی دوربین بگیرید.';
           hint.style.display = 'inline-block';
         }).catch(() => {
-          // اگر هنوز بلاک بود، دکمه شروع را نشان بده
           startBtn.style.display = 'inline-block';
-          msg.textContent = 'برای شروع، دکمه «شروع» را لمس کنید تا ویدیو فعال شود.';
+          msg.textContent = 'برای شروع، دکمه «شروع» را لمس کنید.';
         });
       }
     }
@@ -164,16 +120,14 @@
     document.addEventListener('touchend', armVideo, { passive: true });
     startBtn.addEventListener('click', armVideo);
 
-    // MindAR رویدادها
     scene.addEventListener('arReady', () => {
       if (!armed) startBtn.style.display = 'inline-block';
       msg.textContent = 'دوربین آماده است؛ جلد را جلوی دوربین بگیرید.';
       hint.style.display = 'inline-block';
     });
 
-    scene.addEventListener('arError', (e) => {
-      console.error(e);
-      msg.textContent = 'خطا در شروع AR. تنظیمات دوربین را بررسی کرده و صفحه را رفرش کنید.';
+    scene.addEventListener('arError', () => {
+      msg.textContent = 'خطا در شروع AR. مجوز دوربین را بررسی کنید.';
       startBtn.style.display = 'inline-block';
     });
 
@@ -182,30 +136,18 @@
       hint.style.display = 'none';
       if (armed) {
         vid.currentTime = 0;
-        vid.play().catch(()=>{
+        vid.play().catch(() => {
           startBtn.style.display = 'inline-block';
           msg.textContent = 'برای پخش ویدیو، روی «شروع» لمس کنید.';
         });
-      } else {
-        startBtn.style.display = 'inline-block';
       }
     });
 
     target.addEventListener('targetLost', () => {
       msg.textContent = 'تصویر از دست رفت. دوباره جلد را جلوی دوربین بگیرید.';
       hint.style.display = 'inline-block';
-      vid.pause();
-      vid.currentTime = 0;
+      vid.pause(); vid.currentTime = 0;
     });
-
-    // هشدار حالت افقی (اختیاری)
-    function checkOrientation() {
-      const isLandscape = window.innerWidth > window.innerHeight;
-      rotate.style.display = isLandscape ? 'flex' : 'none';
-    }
-    window.addEventListener('resize', checkOrientation);
-    window.addEventListener('orientationchange', checkOrientation);
-    checkOrientation();
   </script>
 </body>
 </html>
