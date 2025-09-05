@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>دفتر زنده</title>
+
+  <!-- کتابخانه‌های لازم -->
+  <script src="https://cdn.jsdelivr.net/npm/aframe@1.5.0/dist/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+
+  <style>
+    body { margin:0; overflow:hidden; }
+    #tap { position:fixed; left:50%; bottom:16px; transform:translateX(-50%);
+      background:#000; color:#fff; padding:10px 14px; border-radius:10px; display:none; }
+  </style>
+</head>
+<body>
+  <!-- ویدیوی متحرک جلد -->
+  <video id="vid" src="video.mp4" playsinline webkit-playsinline preload="auto" crossorigin="anonymous"></video>
+  <div id="tap">برای فعال‌شدن ویدیو یک‌بار لمس/کلیک کنید</div>
+
+  <a-scene
+    mindar-image="imageTargetSrc: targets.mind;"
+    vr-mode-ui="enabled: false"
+    device-orientation-permission-ui="enabled: true"
+    renderer="colorManagement: true; physicallyCorrectLights: true;">
+
+    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+    <!-- وقتی جلد شناسایی شد -->
+    <a-entity mindar-image-target="targetIndex: 0" id="target">
+      <!-- صفحه پخش ویدیو روی جلد -->
+      <a-video src="#vid" width="1" height="0.6" position="0 0 0" rotation="0 0 0"></a-video>
+    </a-entity>
+  </a-scene>
+
+  <script>
+    const vid = document.getElementById('vid');
+    const tap = document.getElementById('tap');
+    const target = document.getElementById('target');
+    let armed = false;
+
+    function armVideo(){
+      if (armed) return;
+      const p = vid.play();
+      if (p && p.then) {
+        p.then(()=>{ vid.pause(); vid.currentTime = 0; armed = true; tap.style.display='none'; })
+         .catch(()=>{ tap.style.display='block'; });
+      }
+    }
+    document.addEventListener('click', armVideo);
+    document.addEventListener('touchend', armVideo, {passive:true});
+
+    target.addEventListener('targetFound', ()=>{
+      if (armed) { vid.currentTime = 0; vid.play().catch(()=>{ tap.style.display='block'; }); }
+    });
+    target.addEventListener('targetLost', ()=>{
+      vid.pause(); vid.currentTime = 0;
+    });
+  </script>
+</body>
+</html>
