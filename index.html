@@ -1,87 +1,35 @@
 <!DOCTYPE html>
-<html lang="fa" dir="rtl">
+<html lang="fa">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <title>دفتر زنده - تم زرافه</title>
-
-  <!-- کتابخانه‌ها -->
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>تست AR</title>
   <script src="https://cdn.jsdelivr.net/npm/aframe@1.5.0/dist/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
-
   <style>
-    :root{
-      --giraffe-yellow:#FFD166;
-      --giraffe-brown:#8B5E3C;
-      --ink:#1a1a1a;
-    }
-    html, body { margin:0; padding:0; height:100%; overflow:hidden; background:var(--giraffe-yellow); }
-    body { font-family: sans-serif; color:var(--ink); }
-
-    /* پس‌زمینه خال‌خال زرافه */
-    .bg {
-      position: fixed; inset: 0; z-index: 0;
-      background-color: var(--giraffe-yellow);
-      background-image:
-        radial-gradient(circle at 20% 30%, var(--giraffe-brown) 0 15%, transparent 16%),
-        radial-gradient(circle at 70% 20%, var(--giraffe-brown) 0 12%, transparent 13%),
-        radial-gradient(circle at 40% 70%, var(--giraffe-brown) 0 18%, transparent 19%),
-        radial-gradient(circle at 80% 80%, var(--giraffe-brown) 0 14%, transparent 15%);
-      background-size: 200px 200px;
-    }
-
-    .header {
-      position: fixed; top: 8px; left: 50%; transform: translateX(-50%);
-      z-index: 4; display:flex; align-items:center; gap:8px;
-      background: rgba(255,255,255,0.85);
-      padding: 6px 12px; border-radius: 14px; border:1px solid #eee;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.06);
-    }
-    .header .logo { font-size: 20px; }
-    .header .title { font-weight: 700; font-size: 14px; }
-
+    html, body { margin:0; height:100%; overflow:hidden; background:#FFD166; }
     #msg {
-      position: fixed; top: 60px; left: 50%; transform: translateX(-50%);
-      background: rgba(0,0,0,0.65); color: #fff; padding: 10px 14px;
-      border-radius: 12px; font-size: 14px; z-index: 5; text-align:center;
-      max-width: 85vw;
+      position: fixed; top: 10px; left: 50%; transform: translateX(-50%);
+      background: rgba(0,0,0,0.6); color: #fff; padding: 8px 12px;
+      border-radius: 8px; font-family: sans-serif; z-index: 5;
     }
-    #hint {
-      position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
-      background: rgba(255,255,255,0.9); border:1px solid #eee; padding: 8px 12px;
-      border-radius: 10px; font-size: 12px; z-index:5; display:none;
-    }
-
-    /* صحنه AR فول‌اسکرین */
-    a-scene { position: fixed !important; inset: 0 !important; z-index: 1; }
   </style>
 </head>
 <body>
-  <div class="bg"></div>
+  <div id="msg">در حال بارگذاری AR...</div>
 
-  <div class="header">
-    <div class="logo">🦒✨</div>
-    <div class="title">دفتر زنده — جلد را اسکن کن!</div>
-  </div>
-
-  <div id="msg">در حال آماده‌سازی AR...</div>
-  <div id="hint">گوشی را روی جلد نگه دارید تا ویدیو ظاهر شود</div>
-
-  <!-- ویدیو؛ عمداً muted تا بدون کلیک اجرا شود -->
   <video id="vid" src="video.mp4" playsinline webkit-playsinline muted loop preload="auto" crossorigin="anonymous"></video>
 
   <a-scene
     mindar-image="imageTargetSrc: targets.mind; uiScanning: true; uiLoading: true;"
     vr-mode-ui="enabled: false"
     device-orientation-permission-ui="enabled: false"
-    renderer="colorManagement: true; physicallyCorrectLights: true;"
     embedded
     id="scene">
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
     <a-entity mindar-image-target="targetIndex: 0" id="target">
-      <!-- نسبت 16:9 -->
       <a-video src="#vid" width="1" height="0.5625" position="0 0 0"></a-video>
     </a-entity>
   </a-scene>
@@ -91,63 +39,28 @@
     const target = document.getElementById('target');
     const vid = document.getElementById('vid');
     const msg = document.getElementById('msg');
-    const hint = document.getElementById('hint');
-
-    // تلاش فوری برای گرفتن مجوز دوربین (برای نمایش دیالوگ روی موبایل)
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-      navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-        .then(stream => {
-          // آزاد کردن استریم فوری (MindAR خودش مدیریت می‌کند)
-          stream.getTracks().forEach(t => t.stop());
-          msg.textContent = 'دوربین فعال شد. در حال بارگذاری AR...';
-        })
-        .catch(() => {
-          msg.textContent = 'لطفاً اجازه دسترسی به دوربین را بدهید و صفحه را رفرش کنید.';
-        });
-    } else {
-      msg.textContent = 'مرورگر شما از دوربین پشتیبانی نمی‌کند. لطفاً Chrome موبایل یا Safari iOS را امتحان کنید.';
-    }
-
-    // تلاش برای آماده‌سازی ویدیو بدون نیاز به کلیک (به خاطر muted بودن)
-    (async () => {
-      try {
-        vid.muted = true;
-        await vid.play();
-        // بلافاصله مکث تا فقط مجوز autoplay تأیید شود
-        vid.pause();
-        vid.currentTime = 0;
-      } catch(e) {
-        // اگر این بخش رد شد، باز هم AR کار می‌کند؛ فقط ویدیو موقع یافتن تارگت play می‌شود
-      }
-    })();
 
     scene.addEventListener('arReady', () => {
       msg.textContent = 'دوربین آماده است؛ جلد را جلوی دوربین بگیرید.';
-      hint.style.display = 'inline-block';
     });
 
     scene.addEventListener('arError', (e) => {
       console.error(e);
-      msg.textContent = 'خطا در شروع AR. مجوز دوربین یا سازگاری مرورگر را بررسی کنید.';
+      msg.textContent = 'خطا در شروع AR. مجوز دوربین یا مرورگر را بررسی کنید.';
     });
 
-    // وقتی تصویر پیدا شد، ویدیو را (بی‌صدا) پخش کن تا نیاز به کلیک نباشد
     target.addEventListener('targetFound', async () => {
       msg.textContent = 'تصویر پیدا شد! در حال پخش ویدیو...';
-      hint.style.display = 'none';
       try {
-        vid.muted = true; // بی‌صدا تا مرورگر بلاک نکند
         vid.currentTime = 0;
         await vid.play();
       } catch(e) {
         console.warn('Video play blocked:', e);
-        msg.textContent = 'ویدیو آماده نشد؛ لطفاً یک‌بار صفحه را رفرش کنید.';
       }
     });
 
     target.addEventListener('targetLost', () => {
       msg.textContent = 'تصویر از دست رفت. دوباره جلد را جلوی دوربین بگیرید.';
-      hint.style.display = 'inline-block';
       vid.pause();
       vid.currentTime = 0;
     });
